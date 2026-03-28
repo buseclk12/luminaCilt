@@ -12,9 +12,12 @@ import {
 import { Link, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../../src/lib/supabase";
+import { useAuthStore } from "../../src/stores/authStore";
+import { fetchProfile } from "../../src/lib/api";
 
 export default function LoginScreen() {
   const { t } = useTranslation();
+  const { setProfile } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,16 +37,21 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!validate()) return;
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       Alert.alert(t("auth.loginError"), error.message);
-    } else {
-      router.replace("/(tabs)");
+      return;
     }
+    if (data.user) {
+      const profile = await fetchProfile(data.user.id);
+      if (profile) setProfile(profile);
+    }
+    setLoading(false);
+    router.replace("/(tabs)");
   };
 
   return (

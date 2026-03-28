@@ -12,20 +12,18 @@ import {
 import { Link, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../../src/lib/supabase";
-import type { SkinType } from "../../src/types";
-
-const SKIN_TYPES: SkinType[] = ["kuru", "yagli", "karma", "hassas", "normal"];
+import { useAuthStore } from "../../src/stores/authStore";
 
 export default function RegisterScreen() {
   const { t } = useTranslation();
+  const { setProfile } = useAuthStore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [skinType, setSkinType] = useState<SkinType | null>(null);
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
-    if (!name || !email || !password || !skinType) {
+    if (!name || !email || !password) {
       Alert.alert(t("common.error"), t("auth.fillAll"));
       return false;
     }
@@ -53,19 +51,27 @@ export default function RegisterScreen() {
       return;
     }
     if (data.user) {
+      // Create profile with "normal" as default - skin test will update it
       const { error: profileError } = await supabase.from("profiles").insert({
         id: data.user.id,
         display_name: name.trim(),
-        skin_type: skinType,
+        skin_type: "normal",
       });
       if (profileError) {
         setLoading(false);
         Alert.alert(t("auth.registerError"), profileError.message);
         return;
       }
+      setProfile({
+        id: data.user.id,
+        display_name: name.trim(),
+        skin_type: "normal",
+        created_at: new Date().toISOString(),
+      });
     }
     setLoading(false);
-    router.replace("/(tabs)");
+    // Go to skin test instead of tabs
+    router.replace("/(onboarding)/skin-test");
   };
 
   return (
@@ -79,6 +85,9 @@ export default function RegisterScreen() {
       >
         <View className="flex-1 justify-center px-8">
           <View className="items-center mb-10">
+            <View className="w-16 h-16 rounded-full bg-blush items-center justify-center mb-4">
+              <Text className="text-2xl">✨</Text>
+            </View>
             <Text className="text-3xl font-bold text-charcoal">
               {t("auth.register")}
             </Text>
@@ -128,32 +137,6 @@ export default function RegisterScreen() {
                 onChangeText={setPassword}
                 secureTextEntry
               />
-            </View>
-
-            <View>
-              <Text className="text-sm text-smoke mb-3 ml-1">
-                {t("skinType.title")}
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {SKIN_TYPES.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => setSkinType(type)}
-                    className={`px-5 py-3 rounded-2xl ${
-                      skinType === type ? "bg-charcoal" : "bg-white"
-                    }`}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      className={`text-sm font-medium ${
-                        skinType === type ? "text-white" : "text-charcoal"
-                      }`}
-                    >
-                      {t(`skinType.${type}`)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
             </View>
 
             <TouchableOpacity

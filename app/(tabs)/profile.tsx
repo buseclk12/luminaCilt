@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../../src/i18n";
 import { useAuthStore } from "../../src/stores/authStore";
 import { updateProfile } from "../../src/lib/api";
+import { requestPermissions, scheduleRoutineReminders, cancelAllReminders } from "../../src/lib/notifications";
 import type { SkinType } from "../../src/types";
 
 const SKIN_TYPES: SkinType[] = ["kuru", "yagli", "karma", "hassas", "normal"];
@@ -65,6 +66,38 @@ export default function ProfileScreen() {
     i18n.changeLanguage(newLang);
   };
 
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  const toggleNotifications = async () => {
+    if (notificationsEnabled) {
+      await cancelAllReminders();
+      setNotificationsEnabled(false);
+      Alert.alert(
+        t("common.success"),
+        i18n.language === "tr" ? "Bildirimler kapatildi." : "Notifications disabled."
+      );
+    } else {
+      const granted = await requestPermissions();
+      if (granted) {
+        await scheduleRoutineReminders();
+        setNotificationsEnabled(true);
+        Alert.alert(
+          t("common.success"),
+          i18n.language === "tr"
+            ? "Sabah 08:00 ve aksam 21:00 hatirlatici ayarlandi."
+            : "Morning 8:00 and evening 9:00 PM reminders set."
+        );
+      } else {
+        Alert.alert(
+          t("common.error"),
+          i18n.language === "tr"
+            ? "Bildirim izni gerekli. Ayarlardan izin verin."
+            : "Notification permission required. Please enable in Settings."
+        );
+      }
+    }
+  };
+
   const menuItems = [
     {
       icon: "person-outline" as const,
@@ -81,6 +114,12 @@ export default function ProfileScreen() {
       label: `${t("profile.language")}: ${i18n.language === "tr" ? "Turkce" : "English"}`,
       bg: "bg-blush",
       onPress: toggleLanguage,
+    },
+    {
+      icon: "notifications-outline" as const,
+      label: `${t("profile.notifications")}: ${notificationsEnabled ? (i18n.language === "tr" ? "Acik" : "On") : (i18n.language === "tr" ? "Kapali" : "Off")}`,
+      bg: "bg-sage",
+      onPress: toggleNotifications,
     },
   ];
 

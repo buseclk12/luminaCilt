@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import i18n from "../../src/i18n";
 import { useAuthStore } from "../../src/stores/authStore";
 import {
   fetchProducts,
@@ -22,6 +23,7 @@ import {
   fetchObservations,
 } from "../../src/lib/api";
 import ObservationModal from "../../src/components/ObservationModal";
+import AddToRoutineModal from "../../src/components/AddToRoutineModal";
 import type { Product, ProductCategory, ProductStatus } from "../../src/types";
 
 const STATUS_CONFIG: Record<ProductStatus, { labelKey: string; bg: string }> = {
@@ -44,6 +46,13 @@ export default function ProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+
+  // Add to routine modal state
+  const [routineModal, setRoutineModal] = useState<{
+    visible: boolean;
+    productId: string;
+    productName: string;
+  }>({ visible: false, productId: "", productName: "" });
 
   // Observation modal state
   const [obsModal, setObsModal] = useState<{
@@ -204,6 +213,7 @@ export default function ProductsScreen() {
                 <TouchableOpacity
                   key={product.id}
                   activeOpacity={0.7}
+                  onPress={() => router.push(`/product/${product.id}`)}
                   onLongPress={() => handleDelete(product)}
                   className="bg-white rounded-card p-5"
                   style={{
@@ -279,6 +289,26 @@ export default function ProductsScreen() {
                         </Text>
                       </TouchableOpacity>
                     </View>
+                  )}
+
+                  {/* Add to routine button for active products */}
+                  {product.status === "aktif" && (
+                    <TouchableOpacity
+                      className="mt-3 flex-row items-center justify-center gap-2 bg-cream rounded-xl py-2.5"
+                      onPress={() =>
+                        setRoutineModal({
+                          visible: true,
+                          productId: product.id,
+                          productName: product.name,
+                        })
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="add-circle-outline" size={16} color="#2D2D2D" />
+                      <Text className="text-charcoal text-xs font-medium">
+                        {i18n.language === "tr" ? "Rutine Ekle" : "Add to Routine"}
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </TouchableOpacity>
               );
@@ -372,6 +402,15 @@ export default function ProductsScreen() {
         productName={obsModal.productName}
         dayNumber={obsModal.dayNumber}
         onSaved={loadProducts}
+      />
+
+      {/* Add to Routine Modal */}
+      <AddToRoutineModal
+        visible={routineModal.visible}
+        onClose={() => setRoutineModal((p) => ({ ...p, visible: false }))}
+        productId={routineModal.productId}
+        productName={routineModal.productName}
+        onAdded={loadProducts}
       />
     </SafeAreaView>
   );

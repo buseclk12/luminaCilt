@@ -3,6 +3,28 @@ import { View, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
+function TabIcon({
+  name,
+  focused,
+  size,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  focused: boolean;
+  size: number;
+}) {
+  if (focused) {
+    return (
+      <View
+        className="w-12 h-12 rounded-full bg-charcoal items-center justify-center"
+        style={{ marginTop: -20 }}
+      >
+        <Ionicons name={name} size={22} color="#FFFFFF" />
+      </View>
+    );
+  }
+  return <Ionicons name={name} size={size} color="#AAAAAA" />;
+}
+
 export default function TabLayout() {
   const { t } = useTranslation();
 
@@ -31,19 +53,18 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t("tabs.home"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ focused, size }) => (
+            <TabIcon name="home-outline" focused={focused} size={size} />
           ),
+          tabBarLabel: () => null,
         }}
       />
       <Tabs.Screen
         name="routine"
         options={{
           title: t("tabs.routine"),
-          tabBarIcon: ({ color }) => (
-            <View className="w-14 h-14 rounded-full bg-charcoal items-center justify-center -mt-5">
-              <Ionicons name="checkmark-circle-outline" size={28} color="#FFFFFF" />
-            </View>
+          tabBarIcon: ({ focused, size }) => (
+            <TabIcon name="checkmark-circle-outline" focused={focused} size={size} />
           ),
           tabBarLabel: () => null,
         }}
@@ -52,18 +73,20 @@ export default function TabLayout() {
         name="products"
         options={{
           title: t("tabs.products"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flask-outline" size={size} color={color} />
+          tabBarIcon: ({ focused, size }) => (
+            <TabIcon name="flask-outline" focused={focused} size={size} />
           ),
+          tabBarLabel: () => null,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: t("tabs.profile"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+          tabBarIcon: ({ focused, size }) => (
+            <TabIcon name="person-outline" focused={focused} size={size} />
           ),
+          tabBarLabel: () => null,
         }}
       />
     </Tabs>

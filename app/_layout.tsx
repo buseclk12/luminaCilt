@@ -30,8 +30,14 @@ export default function RootLayout() {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setProfile(profile);
+        try {
+          const profile = await fetchProfile(session.user.id);
+          if (profile) {
+            setProfile(profile);
+          }
+        } catch (e) {
+          console.log("Profile fetch error:", e);
+        }
       } else {
         setProfile(null);
       }
