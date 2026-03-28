@@ -99,6 +99,7 @@ export default {
     dayProgress: "Day {{current}}/{{total}}",
     enterNote: "Enter today's note",
     noProducts: "No products in this category.",
+    searchPlaceholder: "Search products...",
     fillRequired: "Please enter product name and select a category.",
     deleteConfirm: "Are you sure you want to delete this product?",
     deleteProduct: "Delete Product",
@@ -202,6 +203,19 @@ export default {
     fri: "Fri",
     sat: "Sat",
     sun: "Sun",
+  },
+
+  // Onboarding
+  onboarding: {
+    welcomeTitle: "Welcome!",
+    welcomeDesc: "To start your skincare journey, add your products first, then build your routine.",
+    step1: "1. Add your products",
+    step1Desc: "Add the skincare products you use.",
+    step2: "2. Build your routine",
+    step2Desc: "Organize products into morning and evening routines.",
+    step3: "3. Track daily",
+    step3Desc: "Complete your routine daily, observe new products.",
+    getStarted: "Start Adding Products",
   },
 
   // Brand

@@ -8,6 +8,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
@@ -39,11 +40,13 @@ export default function ProductsScreen() {
   const { t } = useTranslation();
   const { session } = useAuthStore();
   const [filter, setFilter] = useState<ProductStatus | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<ProductCategory | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [adding, setAdding] = useState(false);
 
   // Add to routine modal state
@@ -150,8 +153,9 @@ export default function ProductsScreen() {
     return { current: Math.min(Math.max(diff + 1, 1), 7), total: 7 };
   };
 
-  const filtered =
-    filter === "all" ? products : products.filter((p) => p.status === filter);
+  const filtered = products
+    .filter((p) => filter === "all" || p.status === filter)
+    .filter((p) => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const FILTERS: { labelKey: string; value: ProductStatus | "all" }[] = [
     { labelKey: "products.all", value: "all" },
@@ -162,7 +166,21 @@ export default function ProductsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-cloud">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await loadProducts();
+              setRefreshing(false);
+            }}
+            tintColor="#2D2D2D"
+          />
+        }
+      >
         <View className="px-6 mt-4 mb-4 flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-charcoal">{t("products.title")}</Text>
           <TouchableOpacity
@@ -172,6 +190,25 @@ export default function ProductsScreen() {
           >
             <Ionicons name="add" size={22} color="#FFFFFF" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search */}
+        <View className="px-6 mb-3">
+          <View className="flex-row items-center bg-white rounded-2xl px-4 py-3">
+            <Ionicons name="search-outline" size={18} color="#AAAAAA" />
+            <TextInput
+              className="flex-1 ml-3 text-charcoal text-base"
+              placeholder={t("products.searchPlaceholder") || "Ara..."}
+              placeholderTextColor="#AAAAAA"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")}>
+                <Ionicons name="close-circle" size={18} color="#AAAAAA" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Filters */}

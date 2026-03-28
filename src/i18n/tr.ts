@@ -99,6 +99,7 @@ export default {
     dayProgress: "Gun {{current}}/{{total}}",
     enterNote: "Bugunku notu gir",
     noProducts: "Bu kategoride urun yok.",
+    searchPlaceholder: "Urun ara...",
     fillRequired: "Urun adi ve kategori secin.",
     deleteConfirm: "Bu urunu silmek istedigin emin misin?",
     deleteProduct: "Urunu Sil",
@@ -202,6 +203,19 @@ export default {
     fri: "Cum",
     sat: "Cmt",
     sun: "Paz",
+  },
+
+  // Onboarding
+  onboarding: {
+    welcomeTitle: "Hosgeldin!",
+    welcomeDesc: "Cilt bakim yolculuguna baslamak icin once urunlerini ekle, sonra rutinini olustur.",
+    step1: "1. Urunlerini ekle",
+    step1Desc: "Kullandigin cilt bakim urunlerini sisteme ekle.",
+    step2: "2. Rutinini olustur",
+    step2Desc: "Sabah ve aksam rutinine urunlerini sirala.",
+    step3: "3. Takip et",
+    step3Desc: "Gunluk rutinini tamamla, yeni urunleri gozlemle.",
+    getStarted: "Urun Eklemeye Basla",
   },
 
   // Brand

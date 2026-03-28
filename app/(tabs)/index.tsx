@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,7 @@ export default function HomeScreen() {
     totalRoutineSteps: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadStats = useCallback(async () => {
     if (!session?.user) return;
@@ -45,7 +46,21 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-cloud">
-      <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1 px-6"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await loadStats();
+              setRefreshing(false);
+            }}
+            tintColor="#2D2D2D"
+          />
+        }
+      >
         {/* Header */}
         <View className="mt-4 mb-6">
           <View className="flex-row items-center justify-between">
@@ -65,6 +80,62 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        {/* Onboarding - first time user */}
+        {!loading && stats.totalRoutineSteps === 0 && stats.observingCount === 0 && (
+          <View className="mb-6">
+            <View className="bg-blush/30 rounded-card p-6 mb-4">
+              <Text className="text-charcoal font-bold text-lg mb-2">
+                {t("onboarding.welcomeTitle")}
+              </Text>
+              <Text className="text-smoke text-sm mb-5 leading-5">
+                {t("onboarding.welcomeDesc")}
+              </Text>
+
+              <View className="gap-4">
+                <View className="flex-row items-start gap-3">
+                  <View className="w-8 h-8 rounded-full bg-white items-center justify-center mt-0.5">
+                    <Text className="text-charcoal font-bold text-xs">1</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-charcoal font-semibold text-sm">{t("onboarding.step1")}</Text>
+                    <Text className="text-smoke text-xs mt-0.5">{t("onboarding.step1Desc")}</Text>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-8 h-8 rounded-full bg-white items-center justify-center mt-0.5">
+                    <Text className="text-charcoal font-bold text-xs">2</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-charcoal font-semibold text-sm">{t("onboarding.step2")}</Text>
+                    <Text className="text-smoke text-xs mt-0.5">{t("onboarding.step2Desc")}</Text>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-8 h-8 rounded-full bg-white items-center justify-center mt-0.5">
+                    <Text className="text-charcoal font-bold text-xs">3</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-charcoal font-semibold text-sm">{t("onboarding.step3")}</Text>
+                    <Text className="text-smoke text-xs mt-0.5">{t("onboarding.step3Desc")}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                className="bg-charcoal rounded-2xl py-3.5 items-center mt-5"
+                onPress={() => router.push("/(tabs)/products")}
+                activeOpacity={0.8}
+              >
+                <Text className="text-white text-sm font-semibold">
+                  {t("onboarding.getStarted")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Daily Routine Progress */}
         <TouchableOpacity

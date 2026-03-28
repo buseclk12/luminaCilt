@@ -1,11 +1,12 @@
 import { useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../src/stores/authStore";
-import { fetchRoutines, fetchRoutineLogs, toggleRoutineLog } from "../../src/lib/api";
+import { fetchRoutines, fetchRoutineLogs, toggleRoutineLog, removeFromRoutine } from "../../src/lib/api";
+import { supabase } from "../../src/lib/supabase";
 import type { Routine, Product, RoutineType } from "../../src/types";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -48,6 +49,8 @@ export default function RoutineScreen() {
   const [routines, setRoutines] = useState<(Routine & { product: Product })[]>([]);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!session?.user) return;
@@ -90,6 +93,44 @@ export default function RoutineScreen() {
     }
   };
 
+  const handleRemoveFromRoutine = (routineId: string, productName: string) => {
+    Alert.alert(
+      t("common.delete"),
+      `${productName} - ${t("products.deleteConfirm")}`,
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await removeFromRoutine(routineId);
+              loadData();
+            } catch {}
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMoveStep = async (routineId: string, direction: "up" | "down") => {
+    const idx = routines.findIndex((r) => r.id === routineId);
+    if (idx < 0) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= routines.length) return;
+
+    const currentOrder = routines[idx].step_order;
+    const swapOrder = routines[swapIdx].step_order;
+
+    try {
+      await Promise.all([
+        supabase.from("routines").update({ step_order: swapOrder }).eq("id", routines[idx].id),
+        supabase.from("routines").update({ step_order: currentOrder }).eq("id", routines[swapIdx].id),
+      ]);
+      loadData();
+    } catch {}
+  };
+
   const handleQuickRoutine = () => {
     // Show only cleanser + moisturizer
     const quickSteps = routines.filter(
@@ -109,9 +150,30 @@ export default function RoutineScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-cloud">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-6 mt-4 mb-2">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await loadData();
+              setRefreshing(false);
+            }}
+            tintColor="#2D2D2D"
+          />
+        }
+      >
+        <View className="px-6 mt-4 mb-2 flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-charcoal">{t("routine.title")}</Text>
+          {routines.length > 0 && (
+            <TouchableOpacity onPress={() => setEditMode(!editMode)} activeOpacity={0.7}>
+              <Text className={`text-sm font-medium ${editMode ? "text-red-400" : "text-smoke"}`}>
+                {editMode ? t("common.done") : t("common.edit")}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Date Selector */}
@@ -206,28 +268,49 @@ export default function RoutineScreen() {
 
             {/* Steps */}
             <View className="px-6 gap-3 mb-4">
-              {routines.map((routine) => {
+              {routines.map((routine, idx) => {
                 const isCompleted = completedIds.has(routine.id);
                 const bgColor = CATEGORY_COLORS[routine.product.category] || "bg-white";
                 return (
                   <TouchableOpacity
                     key={routine.id}
-                    onPress={() => handleToggle(routine.id)}
+                    onPress={() => !editMode && handleToggle(routine.id)}
                     activeOpacity={0.7}
                     className={`flex-row items-center p-4 rounded-card ${bgColor}`}
-                    style={{ opacity: isCompleted ? 0.7 : 1 }}
+                    style={{ opacity: isCompleted && !editMode ? 0.7 : 1 }}
                   >
-                    <View
-                      className={`w-8 h-8 rounded-full items-center justify-center mr-4 ${
-                        isCompleted ? "bg-charcoal" : "bg-white border-2 border-gray-200"
-                      }`}
-                    >
-                      {isCompleted && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
-                    </View>
+                    {editMode ? (
+                      /* Edit mode: reorder + delete */
+                      <View className="flex-col items-center mr-3 gap-1">
+                        <TouchableOpacity
+                          onPress={() => handleMoveStep(routine.id, "up")}
+                          disabled={idx === 0}
+                          style={{ opacity: idx === 0 ? 0.2 : 1 }}
+                        >
+                          <Ionicons name="chevron-up" size={18} color="#2D2D2D" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleMoveStep(routine.id, "down")}
+                          disabled={idx === routines.length - 1}
+                          style={{ opacity: idx === routines.length - 1 ? 0.2 : 1 }}
+                        >
+                          <Ionicons name="chevron-down" size={18} color="#2D2D2D" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      /* Normal mode: checkbox */
+                      <View
+                        className={`w-8 h-8 rounded-full items-center justify-center mr-4 ${
+                          isCompleted ? "bg-charcoal" : "bg-white border-2 border-gray-200"
+                        }`}
+                      >
+                        {isCompleted && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+                      </View>
+                    )}
                     <View className="flex-1">
                       <Text
                         className={`text-base font-medium ${
-                          isCompleted ? "text-smoke line-through" : "text-charcoal"
+                          isCompleted && !editMode ? "text-smoke line-through" : "text-charcoal"
                         }`}
                       >
                         {routine.product.name}
@@ -237,6 +320,14 @@ export default function RoutineScreen() {
                         {t(`products.${routine.product.category}`)}
                       </Text>
                     </View>
+                    {editMode && (
+                      <TouchableOpacity
+                        onPress={() => handleRemoveFromRoutine(routine.id, routine.product.name)}
+                        className="ml-2"
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#F44336" />
+                      </TouchableOpacity>
+                    )}
                   </TouchableOpacity>
                 );
               })}

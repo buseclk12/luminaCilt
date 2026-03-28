@@ -108,6 +108,12 @@ export default function ProfileScreen() {
       bg: "bg-sage",
       onPress: toggleNotifications,
     },
+    {
+      icon: "flask-outline" as const,
+      label: i18n.language === "tr" ? "Cilt Testini Tekrarla" : "Retake Skin Test",
+      bg: "bg-lavender",
+      onPress: () => router.push("/(onboarding)/skin-test"),
+    },
   ];
 
   return (
