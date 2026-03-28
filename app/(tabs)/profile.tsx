@@ -72,28 +72,15 @@ export default function ProfileScreen() {
     if (notificationsEnabled) {
       await cancelAllReminders();
       setNotificationsEnabled(false);
-      Alert.alert(
-        t("common.success"),
-        i18n.language === "tr" ? "Bildirimler kapatildi." : "Notifications disabled."
-      );
+      Alert.alert(t("common.success"), t("profile.notificationsDisabled"));
     } else {
       const granted = await requestPermissions();
       if (granted) {
         await scheduleRoutineReminders();
         setNotificationsEnabled(true);
-        Alert.alert(
-          t("common.success"),
-          i18n.language === "tr"
-            ? "Sabah 08:00 ve aksam 21:00 hatirlatici ayarlandi."
-            : "Morning 8:00 and evening 9:00 PM reminders set."
-        );
+        Alert.alert(t("common.success"), t("profile.notificationsEnabled"));
       } else {
-        Alert.alert(
-          t("common.error"),
-          i18n.language === "tr"
-            ? "Bildirim izni gerekli. Ayarlardan izin verin."
-            : "Notification permission required. Please enable in Settings."
-        );
+        Alert.alert(t("common.error"), t("profile.notificationsPermission"));
       }
     }
   };
@@ -111,13 +98,13 @@ export default function ProfileScreen() {
     },
     {
       icon: "language-outline" as const,
-      label: `${t("profile.language")}: ${i18n.language === "tr" ? "Turkce" : "English"}`,
+      label: `${t("profile.language")}: ${t(`profile.lang${i18n.language === "tr" ? "Tr" : "En"}`)}`,
       bg: "bg-blush",
       onPress: toggleLanguage,
     },
     {
       icon: "notifications-outline" as const,
-      label: `${t("profile.notifications")}: ${notificationsEnabled ? (i18n.language === "tr" ? "Acik" : "On") : (i18n.language === "tr" ? "Kapali" : "Off")}`,
+      label: `${t("profile.notifications")}: ${notificationsEnabled ? t("profile.notificationsOn") : t("profile.notificationsOff")}`,
       bg: "bg-sage",
       onPress: toggleNotifications,
     },

@@ -13,7 +13,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import i18n from "../../src/i18n";
 import { useAuthStore } from "../../src/stores/authStore";
 import {
   fetchProducts,
@@ -306,7 +305,7 @@ export default function ProductsScreen() {
                     >
                       <Ionicons name="add-circle-outline" size={16} color="#2D2D2D" />
                       <Text className="text-charcoal text-xs font-medium">
-                        {i18n.language === "tr" ? "Rutine Ekle" : "Add to Routine"}
+                        {t("routineAction.addToRoutine")}
                       </Text>
                     </TouchableOpacity>
                   )}

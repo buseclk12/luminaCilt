@@ -54,7 +54,7 @@ export default function ProductDetailScreen() {
   if (!product) {
     return (
       <SafeAreaView className="flex-1 bg-cloud items-center justify-center">
-        <Text className="text-smoke">{lang === "tr" ? "Urun bulunamadi" : "Product not found"}</Text>
+        <Text className="text-smoke">{t("productDetail.notFound")}</Text>
       </SafeAreaView>
     );
   }
@@ -75,12 +75,12 @@ export default function ProductDetailScreen() {
     if (observations.length < 7) return null;
     const badScore = avgIrritation + avgBreakout;
     if (badScore <= 4 && avgHydration >= 3) {
-      return { emoji: "✅", text: lang === "tr" ? t("observation.goodResult") : t("observation.goodResult"), color: "#D4E2D3" };
+      return { emoji: "✅", text: t("observation.goodResult"), color: "#D4E2D3" };
     }
     if (badScore >= 7) {
-      return { emoji: "⚠️", text: lang === "tr" ? t("observation.badResult") : t("observation.badResult"), color: "#FFE8E8" };
+      return { emoji: "⚠️", text: t("observation.badResult"), color: "#FFE8E8" };
     }
-    return { emoji: "📊", text: lang === "tr" ? t("observation.neutralResult") : t("observation.neutralResult"), color: "#E8E0F0" };
+    return { emoji: "📊", text: t("observation.neutralResult"), color: "#E8E0F0" };
   };
 
   const verdict = getVerdict();
@@ -141,8 +141,8 @@ export default function ProductDetailScreen() {
             shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
           }}>
             <Text className="text-charcoal font-semibold text-sm mb-4">
-              {lang === "tr" ? "Ortalama Skorlar" : "Average Scores"}
-              {` (${observations.length} ${lang === "tr" ? "gun" : "day(s)"})`}
+              {t("productDetail.averageScores")}
+              {` (${observations.length} ${t("productDetail.days")})`}
             </Text>
             <ScoreBar label={t("observation.irritation")} value={avgIrritation} colors={SCORE_COLORS} />
             <ScoreBar label={t("observation.breakout")} value={avgBreakout} colors={SCORE_COLORS} />
@@ -157,7 +157,7 @@ export default function ProductDetailScreen() {
             shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
           }}>
             <Text className="text-charcoal font-semibold text-sm mb-4">
-              {lang === "tr" ? "Gunluk Degisim" : "Daily Progress"}
+              {t("productDetail.dailyProgress")}
             </Text>
             {observations.map((obs) => (
               <View key={obs.id} className="mb-3 pb-3 border-b border-gray-100">
@@ -188,15 +188,15 @@ export default function ProductDetailScreen() {
             <View className="flex-row justify-center gap-6 mt-2">
               <View className="flex-row items-center gap-1">
                 <View className="w-2 h-2 rounded-full bg-red-400" />
-                <Text className="text-smoke text-xs">{lang === "tr" ? "Tahris" : "Irritation"}</Text>
+                <Text className="text-smoke text-xs">{t("productDetail.irritationLabel")}</Text>
               </View>
               <View className="flex-row items-center gap-1">
                 <View className="w-2 h-2 rounded-full bg-orange-400" />
-                <Text className="text-smoke text-xs">{lang === "tr" ? "Sivilce" : "Breakout"}</Text>
+                <Text className="text-smoke text-xs">{t("productDetail.breakoutLabel")}</Text>
               </View>
               <View className="flex-row items-center gap-1">
                 <View className="w-2 h-2 rounded-full bg-blue-400" />
-                <Text className="text-smoke text-xs">{lang === "tr" ? "Nem" : "Hydration"}</Text>
+                <Text className="text-smoke text-xs">{t("productDetail.hydrationLabel")}</Text>
               </View>
             </View>
           </View>
@@ -207,7 +207,7 @@ export default function ProductDetailScreen() {
           <View className="mx-6 items-center py-12">
             <Ionicons name="analytics-outline" size={48} color="#AAAAAA" />
             <Text className="text-smoke mt-4 text-base text-center">
-              {lang === "tr" ? "Henuz gozlem verisi yok." : "No observation data yet."}
+              {t("productDetail.noObservations")}
             </Text>
           </View>
         )}

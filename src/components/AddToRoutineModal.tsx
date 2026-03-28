@@ -21,8 +21,7 @@ export default function AddToRoutineModal({
   productName,
   onAdded,
 }: Props) {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language;
+  const { t } = useTranslation();
   const { session } = useAuthStore();
   const [selectedType, setSelectedType] = useState<RoutineType | null>(null);
   const [saving, setSaving] = useState(false);
@@ -50,7 +49,7 @@ export default function AddToRoutineModal({
         <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10">
           <View className="flex-row items-center justify-between mb-4">
             <Text className="text-xl font-bold text-charcoal">
-              {lang === "tr" ? "Rutine Ekle" : "Add to Routine"}
+              {t("routineAction.addToRoutine")}
             </Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color="#6B6B6B" />
@@ -61,7 +60,7 @@ export default function AddToRoutineModal({
 
           {/* AM/PM Selection */}
           <Text className="text-sm text-smoke mb-3 ml-1">
-            {lang === "tr" ? "Hangi rutine eklensin?" : "Which routine?"}
+            {t("routineAction.whichRoutine")}
           </Text>
 
           <View className="gap-3 mb-6">
@@ -80,9 +79,7 @@ export default function AddToRoutineModal({
                   {t("routine.morning")}
                 </Text>
                 <Text className="text-smoke text-xs">
-                  {lang === "tr"
-                    ? "Temizlik, serum, nemlendirici, SPF"
-                    : "Cleanse, serum, moisturize, SPF"}
+                  {t("routineAction.amDesc")}
                 </Text>
               </View>
               {selectedType === "am" && (
@@ -107,9 +104,7 @@ export default function AddToRoutineModal({
                   {t("routine.evening")}
                 </Text>
                 <Text className="text-smoke text-xs">
-                  {lang === "tr"
-                    ? "Cift temizlik, serum, gece kremi"
-                    : "Double cleanse, serum, night cream"}
+                  {t("routineAction.pmDesc")}
                 </Text>
               </View>
               {selectedType === "pm" && (
@@ -133,11 +128,7 @@ export default function AddToRoutineModal({
                 selectedType ? "text-white" : "text-smoke"
               }`}
             >
-              {saving
-                ? t("common.loading")
-                : lang === "tr"
-                  ? "Rutine Ekle"
-                  : "Add to Routine"}
+              {saving ? t("common.loading") : t("routineAction.addToRoutine")}
             </Text>
           </TouchableOpacity>
         </View>

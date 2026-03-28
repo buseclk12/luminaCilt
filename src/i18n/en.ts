@@ -164,6 +164,33 @@ export default {
     eveningTime: "Evening Routine Time",
     saved: "Changes saved.",
     user: "User",
+    notificationsOn: "On",
+    notificationsOff: "Off",
+    notificationsDisabled: "Notifications disabled.",
+    notificationsEnabled: "Morning 8:00 AM and evening 9:00 PM reminders set.",
+    notificationsPermission: "Notification permission required. Please enable in Settings.",
+    langTr: "Turkce",
+    langEn: "English",
+  },
+
+  // Routine actions
+  routineAction: {
+    addToRoutine: "Add to Routine",
+    whichRoutine: "Which routine?",
+    amDesc: "Cleanse, serum, moisturize, SPF",
+    pmDesc: "Double cleanse, serum, night cream",
+  },
+
+  // Product detail
+  productDetail: {
+    notFound: "Product not found.",
+    averageScores: "Average Scores",
+    days: "day(s)",
+    dailyProgress: "Daily Progress",
+    noObservations: "No observation data yet.",
+    irritationLabel: "Irritation",
+    breakoutLabel: "Breakout",
+    hydrationLabel: "Hydration",
   },
 
   // Days

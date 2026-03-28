@@ -134,7 +134,7 @@ export default function SkinTestScreen() {
   const handleSelect = (optionIndex: number) => {
     setSelectedOption(optionIndex);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const newAnswers = [...answers, optionIndex];
       setAnswers(newAnswers);
 
@@ -154,17 +154,18 @@ export default function SkinTestScreen() {
 
         // Save to profile + DB
         if (session?.user && profile) {
-          updateProfile(session.user.id, { skin_type: res.skinType }).then(
-            (updated) => {
-              if (updated) setProfile(updated);
-            }
-          );
-          supabase.from("skin_test_results").insert({
-            user_id: session.user.id,
-            answers: newAnswers,
-            scores: res.scores,
-            result_skin_type: res.skinType,
-          });
+          try {
+            const updated = await updateProfile(session.user.id, { skin_type: res.skinType });
+            if (updated) setProfile(updated);
+            await supabase.from("skin_test_results").insert({
+              user_id: session.user.id,
+              answers: newAnswers,
+              scores: res.scores,
+              result_skin_type: res.skinType,
+            });
+          } catch (e) {
+            console.log("Failed to save test result:", e);
+          }
         }
       }
     }, 400);

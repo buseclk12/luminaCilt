@@ -164,6 +164,33 @@ export default {
     eveningTime: "Aksam Rutini Saati",
     saved: "Degisiklikler kaydedildi.",
     user: "Kullanici",
+    notificationsOn: "Acik",
+    notificationsOff: "Kapali",
+    notificationsDisabled: "Bildirimler kapatildi.",
+    notificationsEnabled: "Sabah 08:00 ve aksam 21:00 hatirlatici ayarlandi.",
+    notificationsPermission: "Bildirim izni gerekli. Ayarlardan izin verin.",
+    langTr: "Turkce",
+    langEn: "English",
+  },
+
+  // Routine actions
+  routineAction: {
+    addToRoutine: "Rutine Ekle",
+    whichRoutine: "Hangi rutine eklensin?",
+    amDesc: "Temizlik, serum, nemlendirici, SPF",
+    pmDesc: "Cift temizlik, serum, gece kremi",
+  },
+
+  // Product detail
+  productDetail: {
+    notFound: "Urun bulunamadi.",
+    averageScores: "Ortalama Skorlar",
+    days: "gun",
+    dailyProgress: "Gunluk Degisim",
+    noObservations: "Henuz gozlem verisi yok.",
+    irritationLabel: "Tahris",
+    breakoutLabel: "Sivilce",
+    hydrationLabel: "Nem",
   },
 
   // Days
