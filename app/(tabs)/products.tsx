@@ -328,7 +328,7 @@ export default function ProductsScreen() {
                   )}
 
                   {/* Add to routine button for active products */}
-                  {product.status === "aktif" && (
+                  {(product.status === "aktif" || product.status === "gozlemde") && (
                     <TouchableOpacity
                       className="mt-3 flex-row items-center justify-center gap-2 bg-cream rounded-xl py-2.5"
                       onPress={() =>

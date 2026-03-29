@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lumina.skincare",
+      "bundleIdentifier": "com.buseclk.lumina",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Lumina needs camera access for skin progress photos.",
@@ -22,7 +22,7 @@
       }
     },
     "android": {
-      "package": "com.lumina.skincare",
+      "package": "com.buseclk.lumina",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FAFAFA",
@@ -37,6 +37,12 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "24dc53ef-432a-4c6d-be55-66148dd55782"
+      }
+    }
   }
 }
