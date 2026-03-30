@@ -251,3 +251,126 @@ export async function fetchHomeStats(userId: string, today: string) {
 
   return { observingCount, progress, pendingRoutine, totalRoutineSteps };
 }
+
+// ─── STREAK ─────────────────────────────────────────────
+
+export async function fetchStreak(userId: string): Promise<number> {
+  // Get all routine IDs for this user
+  const { data: routines } = await supabase
+    .from("routines")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (!routines || routines.length === 0) return 0;
+
+  const routineIds = new Set(routines.map((r) => r.id));
+  const totalStepsPerDay = routines.length;
+
+  // Get logs from last 60 days
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+  const { data: logs } = await supabase
+    .from("routine_logs")
+    .select("date, routine_id")
+    .eq("user_id", userId)
+    .gte("date", sixtyDaysAgo.toISOString().split("T")[0])
+    .order("date", { ascending: false });
+
+  if (!logs || logs.length === 0) return 0;
+
+  // Group logs by date
+  const logsByDate = new Map<string, number>();
+  logs.forEach((log) => {
+    if (routineIds.has(log.routine_id)) {
+      logsByDate.set(log.date, (logsByDate.get(log.date) || 0) + 1);
+    }
+  });
+
+  // Count consecutive days from today backwards
+  let streak = 0;
+  const today = new Date();
+
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    const completed = logsByDate.get(dateStr) || 0;
+
+    // Day counts if at least half the steps are done
+    if (completed >= Math.ceil(totalStepsPerDay / 2)) {
+      streak++;
+    } else if (i === 0) {
+      // Today not done yet is OK, skip
+      continue;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+// ─── WEEKLY SUMMARY ─────────────────────────────────────
+
+export async function fetchWeeklySummary(userId: string) {
+  const today = new Date();
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const weekAgoStr = weekAgo.toISOString().split("T")[0];
+  const todayStr = today.toISOString().split("T")[0];
+
+  const [routinesRes, logsRes, observationsRes] = await Promise.all([
+    supabase.from("routines").select("id").eq("user_id", userId),
+    supabase
+      .from("routine_logs")
+      .select("date, routine_id")
+      .eq("user_id", userId)
+      .gte("date", weekAgoStr)
+      .lte("date", todayStr),
+    supabase
+      .from("observations")
+      .select("irritation_score, breakout_score, hydration_score")
+      .eq("user_id", userId)
+      .gte("created_at", weekAgo.toISOString()),
+  ]);
+
+  const totalRoutines = routinesRes.data?.length || 0;
+  const logs = logsRes.data || [];
+  const observations = observationsRes.data || [];
+
+  // Calculate days with completed routines
+  const logsByDate = new Map<string, number>();
+  logs.forEach((l) => {
+    logsByDate.set(l.date, (logsByDate.get(l.date) || 0) + 1);
+  });
+
+  let completedDays = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    const count = logsByDate.get(dateStr) || 0;
+    if (totalRoutines > 0 && count >= Math.ceil(totalRoutines / 2)) {
+      completedDays++;
+    }
+  }
+
+  // Average observation scores
+  const avgIrritation = observations.length > 0
+    ? observations.reduce((s, o) => s + o.irritation_score, 0) / observations.length
+    : 0;
+  const avgHydration = observations.length > 0
+    ? observations.reduce((s, o) => s + o.hydration_score, 0) / observations.length
+    : 0;
+
+  return {
+    completedDays,
+    totalDays: 7,
+    completionRate: Math.round((completedDays / 7) * 100),
+    observationCount: observations.length,
+    avgIrritation: Math.round(avgIrritation * 10) / 10,
+    avgHydration: Math.round(avgHydration * 10) / 10,
+  };
+}

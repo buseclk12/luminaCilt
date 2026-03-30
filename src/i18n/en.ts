@@ -205,6 +205,27 @@ export default {
     sun: "Sun",
   },
 
+  // Streak & Weekly
+  streak: {
+    title: "Streak",
+    days: "days in a row",
+    noStreak: "Start your routine!",
+    fire: "You're on fire!",
+    message1: "Your skin thanks you!",
+    message7: "1 week streak! Amazing!",
+    message30: "30 days! You're a legend!",
+  },
+  weekly: {
+    title: "This Week",
+    routineDays: "{{count}}/7 days routine completed",
+    observations: "{{count}} observations logged",
+    avgIrritation: "Avg. irritation: {{score}}/5",
+    avgHydration: "Avg. hydration: {{score}}/5",
+    perfect: "Perfect week!",
+    good: "Looking good!",
+    needsWork: "Keep pushing!",
+  },
+
   // Onboarding
   onboarding: {
     welcomeTitle: "Welcome!",

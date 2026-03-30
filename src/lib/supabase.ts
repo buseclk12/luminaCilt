@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://cyyjugbbejxinlitzugp.supabase.co";
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_edGoKBusKFiWyyTE4htohw_Dz40izQD";
 
 // SecureStore adapter for native, memory fallback for web
 const secureStoreAdapter = {

@@ -1,94 +1,82 @@
 import { Tabs } from "expo-router";
-import { View, Platform } from "react-native";
+import { View, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTranslation } from "react-i18next";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
-function TabIcon({
-  name,
-  focused,
-  size,
-}: {
-  name: keyof typeof Ionicons.glyphMap;
-  focused: boolean;
-  size: number;
-}) {
-  if (focused) {
-    return (
-      <View
-        className="w-12 h-12 rounded-full bg-charcoal items-center justify-center"
-        style={{ marginTop: -20 }}
-      >
-        <Ionicons name={name} size={22} color="#FFFFFF" />
+const TAB_ICONS: { name: keyof typeof Ionicons.glyphMap; focusedName: keyof typeof Ionicons.glyphMap }[] = [
+  { name: "home-outline", focusedName: "home" },
+  { name: "grid-outline", focusedName: "grid" },
+  { name: "checkmark-circle-outline", focusedName: "checkmark-circle" },
+  { name: "person-outline", focusedName: "person" },
+];
+
+function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+  return (
+    <View style={{
+      position: "absolute",
+      bottom: Platform.OS === "ios" ? 32 : 20,
+      left: 0,
+      right: 0,
+      alignItems: "center",
+    }}>
+      <View style={{
+        flexDirection: "row",
+        backgroundColor: "#1A1A1A",
+        borderRadius: 28,
+        height: 48,
+        alignItems: "center",
+        paddingHorizontal: 8,
+        gap: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
+      }}>
+        {state.routes.map((route, index) => {
+          const focused = state.index === index;
+          const icon = TAB_ICONS[index];
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={() => navigation.navigate(route.name)}
+              activeOpacity={0.7}
+              style={{
+                width: focused ? 44 : 40,
+                height: focused ? 44 : 40,
+                borderRadius: focused ? 22 : 20,
+                backgroundColor: focused ? "#FFFFFF" : "transparent",
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: focused ? -4 : 0,
+              }}
+            >
+              <Ionicons
+                name={focused ? icon.focusedName : icon.name}
+                size={20}
+                color={focused ? "#000000" : "#888888"}
+              />
+            </TouchableOpacity>
+          );
+        })}
       </View>
-    );
-  }
-  return <Ionicons name={name} size={size} color="#AAAAAA" />;
+    </View>
+  );
 }
 
 export default function TabLayout() {
-  const { t } = useTranslation();
-
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          height: Platform.OS === "ios" ? 88 : 70,
-          paddingBottom: Platform.OS === "ios" ? 28 : 10,
-          paddingTop: 10,
-        },
-        tabBarActiveTintColor: "#2D2D2D",
-        tabBarInactiveTintColor: "#AAAAAA",
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t("tabs.home"),
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="home-outline" focused={focused} size={size} />
-          ),
-          tabBarLabel: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="routine"
-        options={{
-          title: t("tabs.routine"),
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="checkmark-circle-outline" focused={focused} size={size} />
-          ),
-          tabBarLabel: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="products"
-        options={{
-          title: t("tabs.products"),
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="flask-outline" focused={focused} size={size} />
-          ),
-          tabBarLabel: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t("tabs.profile"),
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="person-outline" focused={focused} size={size} />
-          ),
-          tabBarLabel: () => null,
-        }}
-      />
-    </Tabs>
+    <View style={{ flex: 1, backgroundColor: "#FFF" }}>
+      <Tabs
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="products" />
+        <Tabs.Screen name="routine" />
+        <Tabs.Screen name="profile" />
+      </Tabs>
+    </View>
   );
 }

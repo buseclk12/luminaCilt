@@ -1,453 +1,264 @@
 import { useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Modal,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, RefreshControl, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../src/stores/authStore";
-import {
-  fetchProducts,
-  createProduct,
-  updateProductStatus,
-  deleteProduct,
-  fetchObservations,
-} from "../../src/lib/api";
+import { fetchProducts, createProduct, deleteProduct } from "../../src/lib/api";
 import ObservationModal from "../../src/components/ObservationModal";
 import AddToRoutineModal from "../../src/components/AddToRoutineModal";
-import type { Product, ProductCategory, ProductStatus } from "../../src/types";
+import type { Product, ProductCategory } from "../../src/types";
+import { F } from "../../src/lib/fonts";
 
-const STATUS_CONFIG: Record<ProductStatus, { labelKey: string; bg: string }> = {
-  gozlemde: { labelKey: "products.observing", bg: "bg-blush" },
-  aktif: { labelKey: "products.active", bg: "bg-sage" },
-  birakildi: { labelKey: "products.dropped", bg: "bg-gray-200" },
-};
+const { width } = Dimensions.get("window");
+const CARD_GAP = 10;
+const CARD_W = (width - 48 - CARD_GAP) / 2;
 
-const CATEGORY_KEYS: ProductCategory[] = [
-  "temizleyici", "tonik", "serum", "nemlendirici", "gunes_kremi", "diger",
-];
+const CATS: ProductCategory[] = ["temizleyici", "tonik", "serum", "nemlendirici", "gunes_kremi", "diger"];
+const CAT_ICON: Record<string, keyof typeof Ionicons.glyphMap> = { temizleyici: "water-outline", tonik: "beaker-outline", serum: "sparkles-outline", nemlendirici: "snow-outline", gunes_kremi: "sunny-outline", diger: "ellipse-outline" };
+
+const STATUS_COLOR: Record<string, string> = { gozlemde: "#555", aktif: "#000", birakildi: "#CCC" };
 
 export default function ProductsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
   const { session } = useAuthStore();
-  const [filter, setFilter] = useState<ProductStatus | "all">("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState<ProductCategory | null>(null);
+  const [filter, setFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(false);
+  const [name, setName] = useState("");
+  const [cat, setCat] = useState<ProductCategory | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [routineM, setRoutineM] = useState({ visible: false, productId: "", productName: "" });
+  const [obsM, setObsM] = useState({ visible: false, productId: "", productName: "", dayNumber: 1 });
 
-  // Add to routine modal state
-  const [routineModal, setRoutineModal] = useState<{
-    visible: boolean;
-    productId: string;
-    productName: string;
-  }>({ visible: false, productId: "", productName: "" });
-
-  // Observation modal state
-  const [obsModal, setObsModal] = useState<{
-    visible: boolean;
-    productId: string;
-    productName: string;
-    dayNumber: number;
-  }>({ visible: false, productId: "", productName: "", dayNumber: 1 });
-
-  const loadProducts = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!session?.user) return;
-    try {
-      const data = await fetchProducts(session.user.id);
-      setProducts(data);
-    } catch {}
+    try { setProducts(await fetchProducts(session.user.id)); } catch {}
     setLoading(false);
   }, [session]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      loadProducts();
-    }, [loadProducts])
-  );
+  useFocusEffect(useCallback(() => { setLoading(true); load(); }, [load]));
 
-  const handleAdd = async () => {
-    if (!newName.trim() || !newCategory) {
-      Alert.alert(t("common.error"), t("products.fillRequired"));
-      return;
-    }
+  const add = async () => {
+    if (!name.trim() || !cat) { Alert.alert(t("common.error"), t("products.fillRequired")); return; }
     if (!session?.user) return;
     setAdding(true);
-    try {
-      await createProduct(session.user.id, newName, newCategory);
-      setNewName("");
-      setNewCategory(null);
-      setShowAddModal(false);
-      await loadProducts();
-    } catch (err: any) {
-      Alert.alert(t("common.error"), err.message);
-    }
+    try { await createProduct(session.user.id, name, cat); setName(""); setCat(null); setModal(false); load(); } catch (e: any) { Alert.alert(t("common.error"), e.message); }
     setAdding(false);
   };
 
-  const handleStatusChange = async (product: Product, newStatus: ProductStatus) => {
-    try {
-      await updateProductStatus(product.id, newStatus);
-      await loadProducts();
-    } catch (err: any) {
-      Alert.alert(t("common.error"), err.message);
-    }
+  const filtered = products.filter((p) => filter === "all" || p.status === filter).filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()));
+  const getDay = (p: Product) => Math.min(Math.max(Math.floor((Date.now() - new Date(p.observation_start_date || "").getTime()) / 86400000) + 1, 1), 7);
+
+  const counts = {
+    all: products.length,
+    gozlemde: products.filter((p) => p.status === "gozlemde").length,
+    aktif: products.filter((p) => p.status === "aktif").length,
+    birakildi: products.filter((p) => p.status === "birakildi").length,
   };
-
-  const handleDelete = (product: Product) => {
-    Alert.alert(t("products.deleteProduct"), t("products.deleteConfirm"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("common.delete"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteProduct(product.id);
-            await loadProducts();
-          } catch (err: any) {
-            Alert.alert(t("common.error"), err.message);
-          }
-        },
-      },
-    ]);
-  };
-
-  const openObservation = async (product: Product) => {
-    // Calculate which day of observation
-    if (!product.observation_start_date) return;
-    const start = new Date(product.observation_start_date);
-    const today = new Date();
-    const diffDays = Math.floor(
-      (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const dayNumber = Math.min(Math.max(diffDays + 1, 1), 7);
-    setObsModal({
-      visible: true,
-      productId: product.id,
-      productName: product.name,
-      dayNumber,
-    });
-  };
-
-  const getObservationDay = (product: Product) => {
-    if (!product.observation_start_date) return { current: 0, total: 7 };
-    const start = new Date(product.observation_start_date);
-    const today = new Date();
-    const diff = Math.floor(
-      (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return { current: Math.min(Math.max(diff + 1, 1), 7), total: 7 };
-  };
-
-  const filtered = products
-    .filter((p) => filter === "all" || p.status === filter)
-    .filter((p) => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
-  const FILTERS: { labelKey: string; value: ProductStatus | "all" }[] = [
-    { labelKey: "products.all", value: "all" },
-    { labelKey: "products.observing", value: "gozlemde" },
-    { labelKey: "products.active", value: "aktif" },
-    { labelKey: "products.dropped", value: "birakildi" },
-  ];
 
   return (
-    <SafeAreaView className="flex-1 bg-cloud">
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={async () => {
-              setRefreshing(true);
-              await loadProducts();
-              setRefreshing(false);
-            }}
-            tintColor="#2D2D2D"
-          />
-        }
-      >
-        <View className="px-6 mt-4 mb-4 flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-charcoal">{t("products.title")}</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAFAFA" }}>
+      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor="#000" />}>
+
+        {/* Header */}
+        <View style={{ paddingHorizontal: 24, marginTop: 16, marginBottom: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={{ fontFamily: F.heading, fontSize: 26, color: "#000" }}>{t("products.title")}</Text>
           <TouchableOpacity
-            className="w-10 h-10 rounded-full bg-charcoal items-center justify-center"
-            onPress={() => setShowAddModal(true)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add" size={22} color="#FFFFFF" />
+            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}
+            onPress={() => setModal(true)}>
+            <Ionicons name="add" size={22} color="#FFF" />
           </TouchableOpacity>
         </View>
 
         {/* Search */}
-        <View className="px-6 mb-3">
-          <View className="flex-row items-center bg-white rounded-2xl px-4 py-3">
-            <Ionicons name="search-outline" size={18} color="#AAAAAA" />
-            <TextInput
-              className="flex-1 ml-3 text-charcoal text-base"
-              placeholder={t("products.searchPlaceholder") || "Ara..."}
-              placeholderTextColor="#AAAAAA"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <Ionicons name="close-circle" size={18} color="#AAAAAA" />
-              </TouchableOpacity>
-            )}
+        <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+          <View style={{
+            flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", borderRadius: 14,
+            paddingHorizontal: 14, height: 44,
+            shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6,
+          }}>
+            <Ionicons name="search" size={16} color="#CCC" />
+            <TextInput style={{ flex: 1, marginLeft: 10, fontFamily: F.regular, fontSize: 14, color: "#000" }} placeholder={t("products.searchPlaceholder")} placeholderTextColor="#CCC" value={search} onChangeText={setSearch} />
+            {search.length > 0 && <TouchableOpacity onPress={() => setSearch("")}><Ionicons name="close-circle" size={16} color="#CCC" /></TouchableOpacity>}
           </View>
         </View>
 
         {/* Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mb-5"
-          contentContainerStyle={{ paddingHorizontal: 24 }}
-        >
-          {FILTERS.map((f) => (
-            <TouchableOpacity
-              key={f.value}
-              onPress={() => setFilter(f.value)}
-              className={`mr-2 px-5 py-2.5 rounded-2xl ${
-                filter === f.value ? "bg-charcoal" : "bg-white"
-              }`}
-              activeOpacity={0.7}
-            >
-              <Text
-                className={`text-sm font-medium ${
-                  filter === f.value ? "text-white" : "text-smoke"
-                }`}
-              >
-                {t(f.labelKey)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ paddingHorizontal: 24, gap: 6 }}>
+          {(["all", "gozlemde", "aktif", "birakildi"] as const).map((f) => {
+            const active = filter === f;
+            const count = counts[f];
+            return (
+              <TouchableOpacity key={f} onPress={() => setFilter(f)}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 6,
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
+                  backgroundColor: active ? "#000" : "#FFF",
+                  shadowColor: active ? "transparent" : "#000",
+                  shadowOffset: { width: 0, height: 1 }, shadowOpacity: active ? 0 : 0.03, shadowRadius: 4,
+                }}>
+                <Text style={{ fontFamily: active ? F.medium : F.regular, fontSize: 12, color: active ? "#FFF" : "#888" }}>
+                  {t(`products.${f === "all" ? "all" : f === "gozlemde" ? "observing" : f === "aktif" ? "active" : "dropped"}`)}
+                </Text>
+                <View style={{
+                  backgroundColor: active ? "rgba(255,255,255,0.2)" : "#F5F5F5",
+                  borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1,
+                }}>
+                  <Text style={{ fontFamily: F.medium, fontSize: 10, color: active ? "#FFF" : "#BBB" }}>{count}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
-        {loading ? (
-          <ActivityIndicator size="large" color="#2D2D2D" className="mt-8" />
-        ) : (
-          <View className="px-6 gap-3 mb-8">
-            {filtered.map((product) => {
-              const statusCfg = STATUS_CONFIG[product.status];
-              const obs = getObservationDay(product);
-              return (
-                <TouchableOpacity
-                  key={product.id}
-                  activeOpacity={0.7}
-                  onPress={() => router.push(`/product/${product.id}`)}
-                  onLongPress={() => handleDelete(product)}
-                  className="bg-white rounded-card p-5"
-                  style={{
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.04,
-                    shadowRadius: 4,
-                    elevation: 1,
-                  }}
-                >
-                  <View className="flex-row items-start justify-between">
-                    <View className="flex-1">
-                      <Text className="text-charcoal font-semibold text-base">
-                        {product.name}
-                      </Text>
-                      <Text className="text-smoke text-sm mt-1">
-                        {t(`products.${product.category}`)}
-                      </Text>
+        {loading ? <ActivityIndicator size="small" color="#000" style={{ marginTop: 40 }} /> : (
+          <View style={{ paddingHorizontal: 24, marginBottom: 100 }}>
+            {/* Product cards grid */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: CARD_GAP }}>
+              {filtered.map((p) => {
+                const day = getDay(p);
+                const statusColor = STATUS_COLOR[p.status] || "#999";
+                return (
+                  <TouchableOpacity key={p.id}
+                    onPress={() => router.push(`/product/${p.id}`)}
+                    onLongPress={() => Alert.alert(t("products.deleteProduct"), p.name, [
+                      { text: t("common.cancel"), style: "cancel" },
+                      { text: t("common.delete"), style: "destructive", onPress: () => { deleteProduct(p.id); load(); } },
+                    ])}
+                    activeOpacity={0.7}
+                    style={{
+                      width: CARD_W, backgroundColor: "#FFF", borderRadius: 16, padding: 16,
+                      shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6,
+                    }}>
+                    {/* Category icon */}
+                    <View style={{
+                      width: 40, height: 40, borderRadius: 12, backgroundColor: "#F8F8F8",
+                      alignItems: "center", justifyContent: "center", marginBottom: 14,
+                    }}>
+                      <Ionicons name={CAT_ICON[p.category] || "ellipse-outline"} size={20} color="#333" />
                     </View>
-                    <View className={`px-3 py-1.5 rounded-xl ${statusCfg.bg}`}>
-                      <Text className="text-charcoal text-xs font-medium">
-                        {t(statusCfg.labelKey)}
-                      </Text>
-                    </View>
-                  </View>
 
-                  {/* Observation progress */}
-                  {product.status === "gozlemde" && (
-                    <View className="mt-4">
-                      <View className="flex-row items-center justify-between mb-2">
-                        <Text className="text-smoke text-xs">
-                          {t("products.dayProgress", {
-                            current: obs.current,
-                            total: obs.total,
-                          })}
-                        </Text>
+                    {/* Name */}
+                    <Text style={{ fontFamily: F.medium, fontSize: 14, color: "#000", marginBottom: 3 }} numberOfLines={2}>{p.name}</Text>
+                    <Text style={{ fontFamily: F.light, fontSize: 11, color: "#BBB", marginBottom: 12 }}>{t(`products.${p.category}`)}</Text>
+
+                    {/* Status + observation progress */}
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
+                      <Text style={{ fontFamily: F.light, fontSize: 10, color: "#999" }}>
+                        {t(`products.${p.status === "gozlemde" ? "observing" : p.status === "aktif" ? "active" : "dropped"}`)}
+                      </Text>
+                    </View>
+
+                    {p.status === "gozlemde" && (
+                      <View style={{ marginTop: 10, height: 3, backgroundColor: "#F0F0F0", borderRadius: 2 }}>
+                        <View style={{ height: "100%", backgroundColor: "#000", borderRadius: 2, width: `${(day / 7) * 100}%` }} />
+                      </View>
+                    )}
+
+                    {/* Action buttons */}
+                    <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
+                      {p.status === "gozlemde" && (
                         <TouchableOpacity
-                          className="flex-row items-center gap-1"
-                          onPress={() => openObservation(product)}
-                        >
-                          <Text className="text-charcoal text-xs font-medium">
-                            {t("products.enterNote")}
-                          </Text>
-                          <Ionicons name="chevron-forward" size={12} color="#2D2D2D" />
+                          style={{ flex: 1, backgroundColor: "#F8F8F8", borderRadius: 10, paddingVertical: 8, alignItems: "center" }}
+                          onPress={() => { const d = getDay(p); setObsM({ visible: true, productId: p.id, productName: p.name, dayNumber: d }); }}>
+                          <Text style={{ fontFamily: F.medium, fontSize: 10, color: "#666" }}>{lang === "tr" ? `Gun ${day}/7` : `Day ${day}/7`}</Text>
                         </TouchableOpacity>
-                      </View>
-                      <View className="h-2 bg-cream rounded-full overflow-hidden">
-                        <View
-                          className="h-full bg-blush rounded-full"
-                          style={{ width: `${(obs.current / obs.total) * 100}%` }}
-                        />
-                      </View>
+                      )}
+                      {(p.status === "aktif" || p.status === "gozlemde") && (
+                        <TouchableOpacity
+                          style={{ flex: 1, backgroundColor: "#000", borderRadius: 10, paddingVertical: 8, alignItems: "center" }}
+                          onPress={() => setRoutineM({ visible: true, productId: p.id, productName: p.name })}>
+                          <Text style={{ fontFamily: F.medium, fontSize: 10, color: "#FFF" }}>+ {lang === "tr" ? "Rutine" : "Routine"}</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
-                  )}
-
-                  {/* Status actions */}
-                  {product.status === "gozlemde" && obs.current >= 7 && (
-                    <View className="flex-row gap-2 mt-3">
-                      <TouchableOpacity
-                        className="flex-1 bg-sage rounded-xl py-2 items-center"
-                        onPress={() => handleStatusChange(product, "aktif")}
-                      >
-                        <Text className="text-charcoal text-xs font-medium">
-                          {t("products.markActive")}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        className="flex-1 bg-gray-200 rounded-xl py-2 items-center"
-                        onPress={() => handleStatusChange(product, "birakildi")}
-                      >
-                        <Text className="text-smoke text-xs font-medium">
-                          {t("products.markDropped")}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {/* Add to routine button for active products */}
-                  {(product.status === "aktif" || product.status === "gozlemde") && (
-                    <TouchableOpacity
-                      className="mt-3 flex-row items-center justify-center gap-2 bg-cream rounded-xl py-2.5"
-                      onPress={() =>
-                        setRoutineModal({
-                          visible: true,
-                          productId: product.id,
-                          productName: product.name,
-                        })
-                      }
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="add-circle-outline" size={16} color="#2D2D2D" />
-                      <Text className="text-charcoal text-xs font-medium">
-                        {t("routineAction.addToRoutine")}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             {filtered.length === 0 && (
-              <View className="items-center py-12">
-                <Ionicons name="flask-outline" size={48} color="#AAAAAA" />
-                <Text className="text-smoke mt-4 text-base">
-                  {t("products.noProducts")}
-                </Text>
+              <View style={{ alignItems: "center", paddingVertical: 60 }}>
+                <View style={{
+                  width: 64, height: 64, borderRadius: 32, backgroundColor: "#FFF",
+                  alignItems: "center", justifyContent: "center", marginBottom: 16,
+                  shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
+                }}>
+                  <Ionicons name="flask-outline" size={24} color="#CCC" />
+                </View>
+                <Text style={{ fontFamily: F.regular, color: "#BBB", fontSize: 14 }}>{t("products.noProducts")}</Text>
               </View>
             )}
           </View>
         )}
       </ScrollView>
 
-      {/* Add Product Modal */}
-      <Modal visible={showAddModal} animationType="slide" transparent>
-        <View className="flex-1 justify-end bg-black/30">
-          <View className="bg-white rounded-t-3xl px-6 pt-6 pb-10">
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-xl font-bold text-charcoal">
-                {t("products.addProduct")}
-              </Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Ionicons name="close" size={24} color="#6B6B6B" />
+      {/* Add Modal */}
+      <Modal visible={modal} animationType="slide" transparent>
+        <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" }}>
+          <View style={{ backgroundColor: "#FFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 48 }}>
+            {/* Handle */}
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: "#E5E5E5", alignSelf: "center", marginBottom: 20 }} />
+
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <Text style={{ fontFamily: F.heading, fontSize: 20, color: "#000" }}>{t("products.addProduct")}</Text>
+              <TouchableOpacity onPress={() => setModal(false)} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#F5F5F5", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="close" size={18} color="#999" />
               </TouchableOpacity>
             </View>
 
-            <Text className="text-sm text-smoke mb-2 ml-1">{t("products.productName")}</Text>
+            <Text style={{ fontFamily: F.light, fontSize: 11, color: "#BBB", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>{t("products.productName")}</Text>
             <TextInput
-              className="bg-cloud rounded-2xl px-5 py-4 text-charcoal text-base mb-4"
-              placeholder={t("products.productPlaceholder")}
-              placeholderTextColor="#AAAAAA"
-              value={newName}
-              onChangeText={setNewName}
+              style={{
+                backgroundColor: "#F8F8F8", borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
+                fontFamily: F.regular, fontSize: 15, color: "#000", marginBottom: 24,
+              }}
+              placeholder={t("products.productPlaceholder")} placeholderTextColor="#CCC" value={name} onChangeText={setName}
             />
 
-            <Text className="text-sm text-smoke mb-3 ml-1">{t("products.category")}</Text>
-            <View className="flex-row flex-wrap gap-2 mb-6">
-              {CATEGORY_KEYS.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setNewCategory(cat)}
-                  className={`px-4 py-2.5 rounded-2xl ${
-                    newCategory === cat ? "bg-charcoal" : "bg-cloud"
-                  }`}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    className={`text-sm ${
-                      newCategory === cat ? "text-white font-medium" : "text-smoke"
-                    }`}
-                  >
-                    {t(`products.${cat}`)}
-                  </Text>
+            <Text style={{ fontFamily: F.light, fontSize: 11, color: "#BBB", textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 10 }}>{t("products.category")}</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
+              {CATS.map((c) => (
+                <TouchableOpacity key={c} onPress={() => setCat(c)}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 6,
+                    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
+                    backgroundColor: cat === c ? "#000" : "#F5F5F5",
+                  }}>
+                  <Ionicons name={CAT_ICON[c]} size={14} color={cat === c ? "#FFF" : "#888"} />
+                  <Text style={{ fontFamily: F.regular, fontSize: 13, color: cat === c ? "#FFF" : "#666" }}>{t(`products.${c}`)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <View className="bg-cream/60 rounded-2xl p-4 mb-6">
-              <View className="flex-row items-center gap-2 mb-1">
-                <Ionicons name="information-circle-outline" size={16} color="#6B6B6B" />
-                <Text className="text-smoke text-xs font-medium">
-                  {t("products.observationInfo")}
-                </Text>
+            {/* Info */}
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F5F5F5",
+              borderRadius: 12, padding: 14, marginBottom: 24,
+            }}>
+              <Ionicons name="eye-outline" size={18} color="#999" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: F.medium, fontSize: 12, color: "#555" }}>{t("products.observationInfo")}</Text>
+                <Text style={{ fontFamily: F.light, fontSize: 11, color: "#999", marginTop: 2 }}>{t("products.observationDesc")}</Text>
               </View>
-              <Text className="text-smoke text-xs">{t("products.observationDesc")}</Text>
             </View>
 
-            <TouchableOpacity
-              className="bg-charcoal rounded-2xl py-4 items-center"
-              onPress={handleAdd}
-              disabled={adding}
-              activeOpacity={0.8}
-            >
-              <Text className="text-white text-base font-semibold">
-                {adding ? t("common.loading") : t("products.addButton")}
-              </Text>
+            <TouchableOpacity style={{ backgroundColor: "#000", borderRadius: 14, paddingVertical: 16, alignItems: "center" }} onPress={add} disabled={adding}>
+              <Text style={{ fontFamily: F.semibold, color: "#FFF", fontSize: 14 }}>{adding ? "..." : t("products.addButton")}</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Observation Modal */}
-      <ObservationModal
-        visible={obsModal.visible}
-        onClose={() => setObsModal((p) => ({ ...p, visible: false }))}
-        productId={obsModal.productId}
-        productName={obsModal.productName}
-        dayNumber={obsModal.dayNumber}
-        onSaved={loadProducts}
-      />
-
-      {/* Add to Routine Modal */}
-      <AddToRoutineModal
-        visible={routineModal.visible}
-        onClose={() => setRoutineModal((p) => ({ ...p, visible: false }))}
-        productId={routineModal.productId}
-        productName={routineModal.productName}
-        onAdded={loadProducts}
-      />
+      <ObservationModal visible={obsM.visible} onClose={() => setObsM((p) => ({ ...p, visible: false }))} productId={obsM.productId} productName={obsM.productName} dayNumber={obsM.dayNumber} onSaved={load} />
+      <AddToRoutineModal visible={routineM.visible} onClose={() => setRoutineM((p) => ({ ...p, visible: false }))} productId={routineM.productId} productName={routineM.productName} onAdded={load} />
     </SafeAreaView>
   );
 }

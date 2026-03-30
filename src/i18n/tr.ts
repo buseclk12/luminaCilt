@@ -205,6 +205,27 @@ export default {
     sun: "Paz",
   },
 
+  // Streak & Weekly
+  streak: {
+    title: "Seri",
+    days: "gun ust uste",
+    noStreak: "Rutinine basla!",
+    fire: "Harika gidiyorsun!",
+    message1: "Cildin sana tesekkur ediyor!",
+    message7: "1 haftalik seri! Muhteseemsin!",
+    message30: "30 gun! Sen bir efsanesin!",
+  },
+  weekly: {
+    title: "Bu Hafta",
+    routineDays: "{{count}}/7 gun rutin tamamlandi",
+    observations: "{{count}} gozlem kaydedildi",
+    avgIrritation: "Ort. tahris: {{score}}/5",
+    avgHydration: "Ort. nem: {{score}}/5",
+    perfect: "Mukemmel bir hafta!",
+    good: "Guzel gidiyorsun!",
+    needsWork: "Biraz daha gayret!",
+  },
+
   // Onboarding
   onboarding: {
     welcomeTitle: "Hosgeldin!",
